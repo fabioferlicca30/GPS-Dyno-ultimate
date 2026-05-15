@@ -192,127 +192,127 @@
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
     /* ══════════════════════════════════════
-       CAR MODE — full screen, landscape-first
+       CAR MODE — landscape only
     ══════════════════════════════════════ */
     #carModeScreen{
       display:none;position:fixed;inset:0;z-index:300;
       background:#030303;overflow:hidden;
     }
-    #carModeScreen.open{display:grid}
+    #carModeScreen.open{display:flex;flex-direction:column}
 
-    /* Portrait fallback */
-    #carModeScreen{
-      grid-template-areas:"topbar" "left" "center" "right";
-      grid-template-rows:auto auto 1fr auto;
-      grid-template-columns:1fr;
+    /* Portrait blocker */
+    #cmPortraitBlock{
+      display:none;position:absolute;inset:0;z-index:10;
+      background:#030303;align-items:center;justify-content:center;
+      flex-direction:column;gap:16px;text-align:center;padding:30px;
     }
-    /* Landscape (tablet) */
-    @media(orientation:landscape){
-      #carModeScreen{
-        grid-template-areas:"topbar topbar topbar" "left center right";
-        grid-template-rows:auto 1fr;
-        grid-template-columns:140px 1fr 160px;
-      }
-    }
+    #cmPortraitBlock.vis{display:flex}
+    .portrait-icon{font-size:52px;animation:pulse 1.5s infinite}
+    .portrait-txt{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:2px;color:var(--muted)}
 
+    /* TOPBAR */
     .cm-topbar{
-      grid-area:topbar;
       display:flex;justify-content:space-between;align-items:center;
-      padding:5px 12px;background:rgba(0,0,0,.7);border-bottom:1px solid #111;
-      z-index:10;
+      padding:4px 12px;background:rgba(0,0,0,.8);border-bottom:1px solid #111;
+      flex-shrink:0;z-index:5;
     }
-    .cm-logo-sm{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:3px;color:#222}
+    .cm-logo-sm{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:3px;color:#252525}
     .cm-settings-row{display:flex;align-items:center;gap:6px;font-size:8px;color:var(--muted)}
     .cm-settings-row input{width:52px;padding:3px 6px;font-size:9px;background:#111;border:1px solid #2a2a2a;border-radius:3px;color:var(--text);font-family:'JetBrains Mono',monospace}
     .cm-exit{padding:4px 12px;background:rgba(255,32,32,.12);border:1px solid rgba(255,32,32,.3);color:var(--red);border-radius:5px;font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase}
 
-    /* LEFT panel: gear + mic */
+    /* MAIN ROW: left | center | right */
+    .cm-body{
+      flex:1;display:grid;
+      grid-template-columns:1fr 2fr 1fr;
+      min-height:0;
+    }
+
+    /* LEFT: coppia */
     .cm-left{
-      grid-area:left;
       display:flex;flex-direction:column;align-items:center;justify-content:center;
-      gap:10px;padding:10px;border-bottom:1px solid #111;
+      gap:8px;padding:8px 6px;border-right:1px solid #0f0f0f;
     }
-    @media(orientation:landscape){
-      .cm-left{border-bottom:none;border-right:1px solid #111;padding:12px 10px}
-    }
-    .cm-gear-num{
-      font-family:'Orbitron',sans-serif;font-weight:900;
-      font-size:clamp(44px,10vmin,88px);
-      color:var(--red);text-shadow:0 0 30px rgba(255,32,32,.7);line-height:1;
-    }
-    .cm-gear-lbl{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:-2px}
     .mic-pill{
-      display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;
-      border:1px solid var(--border);font-size:8px;letter-spacing:1px;color:var(--muted);
+      display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;
+      border:1px solid var(--border);font-size:7px;letter-spacing:1px;color:var(--muted);
       cursor:pointer;transition:all .2s;background:#0a0a0a;
     }
     .mic-pill.active{border-color:var(--green);color:var(--green);background:rgba(0,255,136,.07)}
-    .mic-dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
-    .mic-pill.active .mic-dot{background:var(--green);box-shadow:0 0 5px var(--green);animation:blink .8s infinite}
-    .conf-wrap{width:100%;max-width:110px}
-    .conf-lbl{font-size:7px;color:var(--muted);letter-spacing:1px;margin-bottom:3px;text-align:center}
+    .mic-dot{width:5px;height:5px;border-radius:50%;background:var(--muted)}
+    .mic-pill.active .mic-dot{background:var(--green);box-shadow:0 0 4px var(--green);animation:blink .8s infinite}
+    .conf-wrap{width:90px}
+    .conf-lbl{font-size:6px;color:var(--muted);letter-spacing:1px;margin-bottom:3px;text-align:center}
     .conf-bar{height:3px;background:#1a1a1a;border-radius:2px;overflow:hidden}
-    .conf-fill{height:100%;width:0%;border-radius:2px;transition:width .4s}
+    .conf-fill{height:100%;width:0%;border-radius:2px;transition:width .3s}
 
-    /* CALIBRATION panel */
-    .calib-box{
-      background:#0f0f0f;border:1px solid rgba(0,229,255,.2);border-radius:7px;
-      padding:10px;width:100%;text-align:center;font-size:9px;
-    }
-    .calib-box.hidden{display:none}
-    .calib-ttl{font-size:7px;color:var(--cyan);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
-    .calib-status{color:#aaa;line-height:1.6;margin-bottom:7px;font-size:9px}
-    .calib-status b{color:var(--yellow)}
-    .btn-calib{width:100%;padding:8px;background:rgba(0,229,255,.15);border:1px solid var(--cyan);color:var(--cyan);border-radius:5px;font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:1px;cursor:pointer;text-transform:uppercase}
-    .btn-calib:disabled{opacity:.4;cursor:not-allowed}
-    .calib-result{font-size:9px;color:var(--green);margin-top:5px}
-
-    /* CENTER: tachometer */
+    /* CENTER */
     .cm-center{
-      grid-area:center;
-      display:flex;align-items:center;justify-content:center;
-      position:relative;padding:6px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      position:relative;padding:4px;gap:0;
     }
     .tacho-wrap{
       position:relative;
-      width:min(75vmin,380px);
+      width:min(68vh,330px);
       aspect-ratio:1/1;
-    }
-    @media(orientation:landscape){
-      .tacho-wrap{width:min(72vh,360px)}
+      flex-shrink:1;
     }
     canvas#tachoCanvas{width:100%;height:100%;display:block}
     .tacho-center{
       position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
       text-align:center;pointer-events:none;
     }
-    .tacho-rpm-val{font-family:'Orbitron',sans-serif;font-size:clamp(16px,3.5vmin,28px);font-weight:900;color:#fff;line-height:1}
-    .tacho-rpm-unit{font-size:7px;color:var(--muted);letter-spacing:2px;margin-top:2px}
-    .tacho-source{font-size:7px;color:var(--muted);margin-top:3px;letter-spacing:1px}
+    .tacho-gear{
+      font-family:'Orbitron',sans-serif;font-weight:900;
+      font-size:clamp(26px,6.5vh,52px);
+      color:var(--red);text-shadow:0 0 24px rgba(255,32,32,.6);line-height:1;
+    }
+    .tacho-gear-lbl{font-size:6px;color:var(--muted);letter-spacing:2px;margin-top:1px}
+    .tacho-rpm-val{font-family:'Orbitron',sans-serif;font-size:clamp(10px,2vh,16px);font-weight:700;color:#666;line-height:1;margin-top:5px}
+    .tacho-rpm-unit{font-size:6px;color:#333;letter-spacing:2px;margin-top:1px}
 
-    /* RIGHT: numeric gauges */
+    .cm-speed-strip{
+      display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 0 3px;
+    }
+    .cm-speed-val{font-family:'Orbitron',sans-serif;font-size:clamp(20px,4.5vh,34px);font-weight:900;color:var(--cyan);line-height:1;text-shadow:0 0 12px rgba(0,229,255,.35)}
+    .cm-speed-unit{font-size:7px;color:var(--muted);letter-spacing:2px}
+
+    /* RIGHT: potenza */
     .cm-right{
-      grid-area:right;
-      display:flex;flex-direction:row;justify-content:space-around;align-items:center;
-      padding:10px 12px;gap:8px;border-top:1px solid #111;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:8px;padding:8px 6px;border-left:1px solid #0f0f0f;
     }
-    @media(orientation:landscape){
-      .cm-right{
-        flex-direction:column;justify-content:center;
-        border-top:none;border-left:1px solid #111;
-        padding:12px 10px;gap:10px;
-      }
+
+    /* Shared side gauge */
+    .cm-side-gauge{
+      width:100%;background:#080808;border:1px solid #181818;border-radius:8px;
+      padding:8px 10px;text-align:center;position:relative;overflow:hidden;
     }
-    .cm-gauge{
-      background:#0a0a0a;border:1px solid #1e1e1e;border-radius:9px;
-      padding:9px 10px;text-align:center;position:relative;overflow:hidden;flex:1;
+    .cm-side-gauge::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+      background:var(--cac,#333);box-shadow:0 0 5px var(--cac,#333)}
+    .cm-sg-label{font-size:7px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px}
+    .cm-sg-live{font-family:'Orbitron',sans-serif;font-size:clamp(18px,3.8vh,30px);font-weight:900;color:var(--cac,#aaa);line-height:1}
+    .cm-sg-unit{font-size:6px;color:var(--muted);margin-top:2px;margin-bottom:5px}
+    .cm-sg-max-row{display:flex;align-items:center;justify-content:center;gap:4px;
+      border-top:1px solid #141414;padding-top:5px}
+    .cm-sg-max-lbl{font-size:6px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+    .cm-sg-max-val{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--cac);opacity:.65}
+
+    .cm-torque-g{--cac:var(--yellow)}
+    .cm-power-g{--cac:var(--red)}
+
+    /* CALIBRATION */
+    .calib-box{
+      background:#0c0c0c;border:1px solid rgba(0,229,255,.18);border-radius:7px;
+      padding:8px;width:100%;text-align:center;font-size:8px;
     }
-    @media(orientation:landscape){.cm-gauge{flex:none;width:100%}}
-    .cm-gauge::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--cac,#333);box-shadow:0 0 5px var(--cac,#333)}
-    .cm-glbl{font-size:7px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
-    .cm-gval{font-family:'Orbitron',sans-serif;font-size:clamp(18px,3vw,28px);font-weight:700;color:var(--cac,#aaa);line-height:1}
-    .cm-gunit{font-size:7px;color:var(--muted);margin-top:2px}
-    .cm-speed{--cac:var(--cyan)}.cm-power{--cac:var(--red)}.cm-torque{--cac:var(--yellow)}
+    .calib-box.hidden{display:none}
+    .calib-ttl{font-size:6px;color:var(--cyan);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+    .calib-status{color:#999;line-height:1.5;margin-bottom:5px;font-size:8px}
+    .calib-status b{color:var(--yellow)}
+    .btn-calib{width:100%;padding:6px;background:rgba(0,229,255,.12);border:1px solid var(--cyan);color:var(--cyan);border-radius:4px;font-family:'Orbitron',sans-serif;font-size:7px;letter-spacing:1px;cursor:pointer;text-transform:uppercase}
+    .btn-calib:disabled{opacity:.35;cursor:not-allowed}
+    .calib-result{font-size:8px;color:var(--green);margin-top:4px}
   </style>
 </head>
 <body>
@@ -440,71 +440,87 @@
 
 <!-- ══ CAR MODE ══ -->
 <div id="carModeScreen">
+
+  <!-- Portrait blocker -->
+  <div id="cmPortraitBlock">
+    <div class="portrait-icon">📱</div>
+    <div class="portrait-txt">RUOTA IL DISPOSITIVO</div>
+    <div style="font-size:10px;color:#444;letter-spacing:1px;margin-top:4px">La car mode richiede la modalità orizzontale</div>
+  </div>
+
+  <!-- TOPBAR -->
   <div class="cm-topbar">
-    <div class="cm-logo-sm">GPSDYNO</div>
+    <div class="cm-logo-sm">GPSDYNO · CAR MODE</div>
     <div class="cm-settings-row">
-      <span>Max:</span><input type="number" id="rpmMax" value="8000" step="500" onchange="redrawTacho()"/>
+      <span>Max RPM:</span><input type="number" id="rpmMax" value="8000" step="500" onchange="redrawTacho()"/>
       <span>Redline:</span><input type="number" id="rpmRedline" value="7000" step="500" onchange="redrawTacho()"/>
     </div>
     <button class="cm-exit" onclick="closeCarMode()">✕ ESCI</button>
   </div>
 
-  <!-- LEFT -->
-  <div class="cm-left">
-    <div style="text-align:center">
-      <div class="cm-gear-num" id="cmGearNum">—</div>
-      <div class="cm-gear-lbl">MARCIA</div>
-    </div>
+  <!-- BODY: left | center | right -->
+  <div class="cm-body">
 
-    <div class="mic-pill" id="micPill" onclick="toggleMic()">
-      <div class="mic-dot" id="micDot"></div>
-      <span id="micLabel">MIC OFF</span>
-    </div>
+    <!-- LEFT: coppia live + max + mic -->
+    <div class="cm-left">
+      <div class="cm-side-gauge cm-torque-g" style="flex:1;display:flex;flex-direction:column;justify-content:center">
+        <div class="cm-sg-label">COPPIA</div>
+        <div class="cm-sg-live" id="cmTorque">—</div>
+        <div class="cm-sg-unit">Nm</div>
+        <div class="cm-sg-max-row">
+          <span class="cm-sg-max-lbl">MAX</span>
+          <span class="cm-sg-max-val" id="cmTorqueMax">—</span>
+        </div>
+      </div>
 
-    <div class="conf-wrap" id="confWrap" style="display:none">
-      <div class="conf-lbl">SEGNALE</div>
-      <div class="conf-bar"><div class="conf-fill" id="confFill"></div></div>
-    </div>
-
-    <!-- CALIBRATION BOX -->
-    <div class="calib-box hidden" id="calibBox">
-      <div class="calib-ttl">🎯 CALIBRAZIONE</div>
-      <div class="calib-status" id="calibStatus">Porta il motore a <b>3000 RPM</b> stabili e tieni premuto il pulsante.</div>
-      <button class="btn-calib" id="btnCalib" onclick="startCalibration()">TIENI PREMUTO — CALIBRA</button>
-      <div class="calib-result" id="calibResult"></div>
-    </div>
-  </div>
-
-  <!-- CENTER -->
-  <div class="cm-center">
-    <div class="tacho-wrap">
-      <canvas id="tachoCanvas"></canvas>
-      <div class="tacho-center">
-        <div class="tacho-rpm-val" id="cmRpmVal">0</div>
-        <div class="tacho-rpm-unit">RPM</div>
-        <div class="tacho-source" id="rpmSource">—</div>
+      <!-- MIC section -->
+      <div class="mic-pill" id="micPill" onclick="toggleMic()">
+        <div class="mic-dot" id="micDot"></div>
+        <span id="micLabel">🎙 RILEV. MARCIA</span>
+      </div>
+      <div class="conf-wrap" id="confWrap" style="display:none">
+        <div class="conf-lbl">SEGNALE MIC</div>
+        <div class="conf-bar"><div class="conf-fill" id="confFill"></div></div>
+      </div>
+      <div class="calib-box hidden" id="calibBox">
+        <div class="calib-ttl">🎯 CALIBRAZIONE MARCIA</div>
+        <div class="calib-status" id="calibStatus">Porta il motore a <b>3000 RPM</b> stabili e premi il pulsante.</div>
+        <button class="btn-calib" id="btnCalib" onclick="startCalibration()">CALIBRA @ 3000 RPM</button>
+        <div class="calib-result" id="calibResult"></div>
       </div>
     </div>
-  </div>
 
-  <!-- RIGHT -->
-  <div class="cm-right">
-    <div class="cm-gauge cm-speed">
-      <div class="cm-glbl">VELOCITÀ</div>
-      <div class="cm-gval" id="cmSpeed">0</div>
-      <div class="cm-gunit">km/h</div>
+    <!-- CENTER: tachometer + velocità -->
+    <div class="cm-center">
+      <div class="tacho-wrap">
+        <canvas id="tachoCanvas"></canvas>
+        <div class="tacho-center">
+          <div class="tacho-gear" id="cmGearNum">—</div>
+          <div class="tacho-gear-lbl">MARCIA</div>
+          <div class="tacho-rpm-val" id="cmRpmVal">0</div>
+          <div class="tacho-rpm-unit">RPM</div>
+        </div>
+      </div>
+      <div class="cm-speed-strip">
+        <div class="cm-speed-val" id="cmSpeed">0</div>
+        <div class="cm-speed-unit">km/h</div>
+      </div>
     </div>
-    <div class="cm-gauge cm-power">
-      <div class="cm-glbl">POTENZA</div>
-      <div class="cm-gval" id="cmPower">—</div>
-      <div class="cm-gunit">CV</div>
+
+    <!-- RIGHT: potenza live + max -->
+    <div class="cm-right">
+      <div class="cm-side-gauge cm-power-g" style="flex:1;display:flex;flex-direction:column;justify-content:center">
+        <div class="cm-sg-label">POTENZA</div>
+        <div class="cm-sg-live" id="cmPower">—</div>
+        <div class="cm-sg-unit">CV</div>
+        <div class="cm-sg-max-row">
+          <span class="cm-sg-max-lbl">MAX</span>
+          <span class="cm-sg-max-val" id="cmPowerMax">—</span>
+        </div>
+      </div>
     </div>
-    <div class="cm-gauge cm-torque">
-      <div class="cm-glbl">COPPIA</div>
-      <div class="cm-gval" id="cmTorque">—</div>
-      <div class="cm-gunit">Nm</div>
-    </div>
-  </div>
+
+  </div><!-- /cm-body -->
 </div>
 
 <!-- GEAR MODAL -->
@@ -569,6 +585,7 @@ const S={
 let carModeOpen=false;
 let tachoRAF=null;
 let smoothedRpm=0;
+let cmMaxPower=0,cmMaxTorque=0;
 
 // Mic / FFT
 let micStream=null,audioCtx=null,analyser=null,micActive=false,micRafId=null;
@@ -788,11 +805,8 @@ function micLoop(){
   // Smooth mic RPM slightly
   lastMicRpm=lastMicRpm*0.5+rpmFromMic*0.5;
 
-  // Feed into live RPM (overrides GPS estimate)
-  if(lastMicRpm>300&&lastMicRpm<12000){
-    S.liveRpm=lastMicRpm;
-    S.rpmSource='MIC';
-  }
+  // Mic is used ONLY for gear detection — RPM comes from GPS+ratio
+  // (no override of S.liveRpm here)
 
   // Gear detection via vote system
   if(S.speed>MIN_SPEED_KMH/3.6){
@@ -813,8 +827,7 @@ function micLoop(){
     }
   }
 
-  document.getElementById('cmRpmVal').textContent=Math.round(lastMicRpm).toLocaleString('it');
-  document.getElementById('rpmSource').textContent='🎙️ MIC';
+  // Mic display handled by tachoLoop via GPS RPM
 }
 
 function setConfBar(val,color){
@@ -824,8 +837,13 @@ function setConfBar(val,color){
 }
 
 function applyDetectedGear(gearNum,res){
-  document.getElementById('cmGearNum').textContent=gearNum;
   if(res.confidence>0.65&&S.car&&S.car.gears){
+    if(gearNum!==S.gear){
+      // Gear changed — reset max for car mode
+      cmMaxPower=0;cmMaxTorque=0;
+      document.getElementById('cmPowerMax').textContent='—';
+      document.getElementById('cmTorqueMax').textContent='—';
+    }
     S.gear=gearNum;
     S.totalRatio=res.total;
     refreshGearUI(gearNum,res.ratio,res.total);
@@ -994,10 +1012,12 @@ function openGearModal(){
 }
 function closeGearModal(){document.getElementById('gearOverlay').classList.remove('open');}
 function selectGear(num,ratio,total){
+  if(num!==S.gear){cmMaxPower=0;cmMaxTorque=0;
+    const mp=document.getElementById('cmPowerMax');const mt=document.getElementById('cmTorqueMax');
+    if(mp)mp.textContent='—';if(mt)mt.textContent='—';}
   S.gear=num;S.totalRatio=total;
   closeGearModal();refreshGearUI(num,ratio,total);
   if(!S.gpsActive) startGPS();
-  document.getElementById('cmGearNum').textContent=num;
 }
 function refreshGearUI(num,ratio,total){
   const c=S.car;
@@ -1305,7 +1325,10 @@ function openCarMode(){
     document.getElementById('calibResult').textContent=`✓ Calibrato: ${calibFreqHz.toFixed(1)} Hz @ ${CALIB_RPM} RPM`;
     document.getElementById('calibStatus').innerHTML=`Il microfono è calibrato.<br/>Ora rilevo la marcia automaticamente.`;
   }
-  if(S.gear) document.getElementById('cmGearNum').textContent=S.gear;
+  // Reset max counters each time car mode opens
+  cmMaxPower=0;cmMaxTorque=0;
+  const mp=document.getElementById('cmPowerMax');const mt=document.getElementById('cmTorqueMax');
+  if(mp)mp.textContent='—';if(mt)mt.textContent='—';
   setTimeout(()=>{initTacho();tachoLoop();},80);
 }
 
@@ -1334,13 +1357,20 @@ function tachoLoop(){
   smoothedRpm+=(target-smoothedRpm)*0.18;
   drawTacho(smoothedRpm);
   document.getElementById('cmSpeed').textContent=S.liveKmh.toFixed(0);
-  document.getElementById('cmPower').textContent=S.liveCv>0?S.liveCv.toFixed(0):'—';
-  document.getElementById('cmTorque').textContent=S.liveTorque>0?S.liveTorque.toFixed(0):'—';
-  if(!micActive||!micSignalOk){
-    document.getElementById('cmRpmVal').textContent=Math.round(smoothedRpm).toLocaleString('it');
-    document.getElementById('rpmSource').textContent=S.rpmSource||'GPS';
-    if(S.gear) document.getElementById('cmGearNum').textContent=S.gear;
-  }
+  document.getElementById('cmGearNum').textContent=S.gear||'—';
+  document.getElementById('cmRpmVal').textContent=Math.round(smoothedRpm).toLocaleString('it');
+
+  const cv=S.liveCv,trq=S.liveTorque;
+  document.getElementById('cmPower').textContent=cv>0?cv.toFixed(0):'—';
+  document.getElementById('cmTorque').textContent=trq>0?trq.toFixed(0):'—';
+
+  if(cv>cmMaxPower){cmMaxPower=cv;document.getElementById('cmPowerMax').textContent=cv.toFixed(0);}
+  if(trq>cmMaxTorque){cmMaxTorque=trq;document.getElementById('cmTorqueMax').textContent=trq.toFixed(0);}
+
+  // Check orientation — show blocker if portrait
+  const isLandscape=window.innerWidth>window.innerHeight;
+  document.getElementById('cmPortraitBlock').classList.toggle('vis',!isLandscape);
+
   tachoRAF=requestAnimationFrame(tachoLoop);
 }
 
@@ -1432,7 +1462,11 @@ function drawTacho(rpm){
 // RESIZE
 // ═══════════════════════════════════════════════════════
 window.addEventListener('resize',()=>{
-  if(carModeOpen) setTimeout(()=>{initTacho();drawTacho(smoothedRpm);},120);
+  if(carModeOpen){
+    setTimeout(()=>{initTacho();drawTacho(smoothedRpm);},120);
+    const isLandscape=window.innerWidth>window.innerHeight;
+    document.getElementById('cmPortraitBlock').classList.toggle('vis',!isLandscape);
+  }
 });
 </script>
 </body>
