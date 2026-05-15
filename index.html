@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#0a0a0a"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="GPS Dyno"/>
+  <title>GPS Dyno</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="apple-touch-icon" href="icon-192.png"/>
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root{
+      --red:#ff2020;--orange:#ff6b00;--yellow:#ffd000;
+      --green:#00ff88;--cyan:#00e5ff;
+      --bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;
+      --border:#2a2a2a;--text:#e8e8e8;--muted:#555
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;min-height:100dvh;overflow-x:hidden}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.97)}}
+
+    /* ══════════════════════════════════════
+       DISCLAIMER — compact, always fits screen
+    ══════════════════════════════════════ */
+    #disclaimerScreen{
+      position:fixed;inset:0;z-index:999;background:#0a0a0a;
+      display:flex;flex-direction:column;align-items:center;
+      padding:16px 16px 32px;
+      overflow-y:scroll;   /* always scrollable, not auto */
+      -webkit-overflow-scrolling:touch;
+    }
+    .disc-logo{font-family:'Orbitron',sans-serif;font-weight:900;font-size:22px;letter-spacing:3px;color:var(--red);text-shadow:0 0 20px rgba(255,32,32,.5);margin-bottom:10px;margin-top:4px}
+    .disc-logo span{color:var(--text)}
+    .disc-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;width:100%;max-width:500px;margin-bottom:12px}
+    .disc-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
+    .disc-row:last-child{margin-bottom:0}
+    .disc-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+    .disc-text{font-size:11px;color:#ccc;line-height:1.6}
+    .disc-text b{color:var(--yellow)}
+    .disc-check{
+      display:flex;align-items:flex-start;gap:12px;
+      background:rgba(255,32,32,.07);border:1px solid rgba(255,32,32,.25);
+      border-radius:8px;padding:12px;width:100%;max-width:500px;
+      margin-bottom:12px;cursor:pointer;
+    }
+    .disc-check input{width:20px;height:20px;flex-shrink:0;margin-top:1px;accent-color:var(--red);cursor:pointer}
+    .disc-check-txt{font-size:11px;color:#ddd;line-height:1.6}
+    .disc-check-txt b{color:var(--red)}
+    .btn-disc{
+      width:100%;max-width:500px;padding:16px;
+      font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;letter-spacing:3px;
+      border:none;border-radius:8px;cursor:pointer;text-transform:uppercase;
+      background:#1e1e1e;color:#444;transition:all .3s;
+    }
+    .btn-disc.ready{background:linear-gradient(135deg,#ff2020,#ff6b00);color:#fff;box-shadow:0 4px 20px rgba(255,32,32,.4)}
+    .disc-legal{font-size:9px;color:#333;margin-top:10px;text-align:center;line-height:1.6;max-width:500px}
+
+    /* ══════════════════════════════════════
+       MAIN APP
+    ══════════════════════════════════════ */
+    header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#111,#0a0a0a);position:sticky;top:0;z-index:100}
+    .logo{font-family:'Orbitron',sans-serif;font-weight:900;font-size:18px;letter-spacing:3px;color:var(--red);text-shadow:0 0 16px rgba(255,32,32,.5)}
+    .logo span{color:var(--text)}
+    .hdr-right{display:flex;align-items:center;gap:10px}
+    .gps-status{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);letter-spacing:1px}
+    .gps-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);transition:all .3s}
+    .gps-dot.active{background:var(--green);box-shadow:0 0 6px var(--green)}
+    .gps-dot.measuring{background:var(--yellow);box-shadow:0 0 6px var(--yellow);animation:blink .5s infinite}
+    .btn-carmode{padding:5px 10px;background:rgba(0,229,255,.1);border:1px solid var(--cyan);color:var(--cyan);border-radius:5px;font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;white-space:nowrap}
+
+    nav{display:flex;border-bottom:1px solid var(--border);background:var(--bg2)}
+    nav button{flex:1;padding:10px 2px;background:none;border:none;color:var(--muted);font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:1px;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;text-transform:uppercase}
+    nav button.active{color:var(--red);border-bottom-color:var(--red)}
+
+    .page{display:none;padding:16px}
+    .page.active{display:block}
+
+    /* Gauges */
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+    .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+    .gauge{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:11px;position:relative;overflow:hidden}
+    .gauge::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--ac,var(--red));box-shadow:0 0 6px var(--ac,var(--red))}
+    .glabel{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px}
+    .gval{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:700;line-height:1;color:var(--ac,var(--red))}
+    .gunit{font-size:9px;color:var(--muted);margin-top:3px}
+    .gc{--ac:var(--cyan)}.go{--ac:var(--orange)}.gr{--ac:var(--red)}.gy{--ac:var(--yellow)}.gg{--ac:var(--green)}
+
+    .sbar-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px}
+    .sbar-lbl{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-bottom:7px}
+    .sbar-track{height:7px;background:#1e1e1e;border-radius:4px;overflow:hidden}
+    .sbar-fill{height:100%;width:0%;border-radius:4px;background:linear-gradient(90deg,var(--cyan),var(--red));transition:width .3s;box-shadow:0 0 8px var(--red)}
+
+    .gear-panel{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px}
+    .gear-panel-title{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:9px}
+    .gear-row{display:flex;gap:7px;flex-wrap:wrap}
+    .gear-btn{padding:7px 12px;background:#111;border:1px solid var(--border);border-radius:5px;color:var(--muted);font-family:'Orbitron',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;min-width:40px;text-align:center}
+    .gear-btn.sel{background:rgba(255,32,32,.15);border-color:var(--red);color:var(--red)}
+    .gear-btn.unk{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.07)}
+
+    .controls{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+    .btn-main{width:100%;padding:16px;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;letter-spacing:3px;border:none;border-radius:8px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+    .btn-main.start{background:linear-gradient(135deg,#ff2020,#ff6b00);color:#fff;box-shadow:0 4px 16px rgba(255,32,32,.4)}
+    .btn-main.stop{background:linear-gradient(135deg,#333,#1a1a1a);color:var(--red);border:1px solid var(--red)}
+    .btn-main:active,.btn-sec:active{transform:scale(.97)}
+    .btn-sec{width:100%;padding:12px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;background:var(--bg3);color:var(--muted);border:1px solid var(--border);border-radius:8px;cursor:pointer;text-transform:uppercase}
+    .info-box{background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.15);border-radius:8px;padding:12px;font-size:10px;color:#aaa;line-height:1.8}
+    .info-box b{color:var(--cyan)}
+    .rec-ind{display:none;align-items:center;gap:8px;background:rgba(255,32,32,.1);border:1px solid rgba(255,32,32,.3);border-radius:6px;padding:9px 12px;margin-bottom:12px;font-size:10px;color:var(--red);letter-spacing:1px}
+    .rec-ind.vis{display:flex}
+    .rec-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink 1s infinite}
+
+    /* Chart */
+    .chart-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+    .chart-ttl{font-family:'Orbitron',sans-serif;font-size:12px;letter-spacing:2px}
+    .chart-sub{font-size:9px;color:var(--muted);margin-top:3px}
+    .badges{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
+    .badge{padding:3px 9px;border-radius:20px;font-size:9px;font-weight:600;letter-spacing:1px}
+    .bp{background:rgba(255,32,32,.15);color:var(--red);border:1px solid var(--red)}
+    .bt{background:rgba(255,208,0,.15);color:var(--yellow);border:1px solid var(--yellow)}
+    canvas#dynoChart{width:100%;border-radius:8px;background:var(--bg3);border:1px solid var(--border);display:block}
+    .no-data{text-align:center;padding:50px 20px;color:var(--muted)}
+    .no-data-icon{font-size:44px;margin-bottom:14px;opacity:.4}
+    .no-data p{font-size:10px;line-height:1.8}
+
+    /* Cars */
+    .sec-ttl{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+    .car-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+    .car-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;transition:border-color .2s}
+    .car-item.sel{border-color:var(--red)}
+    .car-item.sel .cname{color:var(--red)}
+    .car-item-top{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+    .cname{font-size:12px;font-weight:600;letter-spacing:.5px}
+    .cdet{font-size:9px;color:var(--muted);margin-top:3px}
+    .cmass{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--cyan)}
+    .cmass-u{font-size:8px;color:var(--muted)}
+    .car-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+    .btn-edit{flex:1;padding:8px;background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--cyan);border-radius:5px;font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:1px;cursor:pointer;text-transform:uppercase}
+    .btn-delete{flex:1;padding:8px;background:rgba(255,32,32,.08);border:1px solid rgba(255,32,32,.2);color:var(--red);border-radius:5px;font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:1px;cursor:pointer;text-transform:uppercase}
+
+    .car-form{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px}
+    .form-ttl{font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;color:var(--cyan);margin-bottom:12px}
+    .fr{display:flex;flex-direction:column;gap:3px;margin-bottom:9px}
+    .fr2{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px}
+    .fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:9px}
+    label{font-size:8px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px;display:block}
+    input,select{width:100%;background:#0f0f0f;border:1px solid var(--border);border-radius:5px;padding:9px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;-webkit-appearance:none}
+    input:focus,select:focus{border-color:var(--cyan)}
+    .ratios-wrap{background:#0a0a0a;border:1px solid var(--border);border-radius:5px;padding:11px;margin-bottom:10px}
+    .ratios-ttl{font-size:8px;color:var(--cyan);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
+    .ratios-hint{font-size:9px;color:var(--muted);margin-bottom:9px;line-height:1.5}
+    .grrow{display:grid;grid-template-columns:52px 1fr;gap:7px;align-items:center;margin-bottom:6px}
+    .grlbl{font-size:9px;color:var(--muted)}
+    .btn-add{width:100%;padding:13px;background:rgba(0,229,255,.1);border:1px solid var(--cyan);color:var(--cyan);border-radius:7px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;text-transform:uppercase}
+    .btn-update{width:100%;padding:13px;background:rgba(255,208,0,.1);border:1px solid var(--yellow);color:var(--yellow);border-radius:7px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;text-transform:uppercase;margin-bottom:6px}
+    .btn-cancel-edit{width:100%;padding:10px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:7px;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:1px;cursor:pointer;text-transform:uppercase}
+
+    .run-list{display:flex;flex-direction:column;gap:8px}
+    .run-item{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:11px 13px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+    .run-item:active{border-color:var(--red)}
+    .run-date{font-size:9px;color:var(--muted)}
+    .run-peak{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--red)}
+
+    /* Modals */
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;align-items:flex-end;justify-content:center}
+    .overlay.open{display:flex}
+    .modal{background:var(--bg2);border:1px solid var(--border);border-top-left-radius:14px;border-top-right-radius:14px;padding:20px 16px 44px;width:100%;max-width:520px;max-height:88dvh;overflow-y:auto}
+    .modal-ttl{font-family:'Orbitron',sans-serif;font-size:13px;letter-spacing:2px;color:var(--cyan);margin-bottom:5px}
+    .modal-sub{font-size:10px;color:var(--muted);margin-bottom:15px;line-height:1.6}
+    .mg-list{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+    .mg-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:border-color .2s}
+    .mg-item:active,.mg-item.sel{border-color:var(--red)}
+    .mg-num{font-family:'Orbitron',sans-serif;font-size:20px;color:var(--red)}
+    .mg-rv{font-size:12px;color:var(--text)}
+    .mg-info{font-size:9px;color:var(--muted);text-align:right}
+    .sep{border:none;border-top:1px solid var(--border);margin:12px 0}
+    .btn-cancel{width:100%;padding:12px;background:none;border:1px solid var(--border);color:var(--muted);border-radius:7px;font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;text-transform:uppercase}
+    .wizard-box{background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.2);border-radius:8px;padding:13px;margin-bottom:13px}
+    .wiz-ttl{font-size:8px;color:var(--cyan);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+    .wiz-body{font-size:10px;color:#aaa;line-height:1.7;margin-bottom:10px}
+    .btn-wiz{width:100%;padding:11px;background:rgba(0,229,255,.12);border:1px solid var(--cyan);color:var(--cyan);border-radius:6px;font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;margin-top:7px}
+    .wiz-result{display:none;background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:8px;padding:11px;margin-bottom:11px;font-size:10px;color:#aaa;line-height:1.8}
+    .disc-bottom{margin:16px 0 4px;font-size:8px;color:#333;text-align:center;line-height:1.6}
+    ::-webkit-scrollbar{width:3px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+    /* ══════════════════════════════════════
+       CAR MODE — full screen, landscape-first
+    ══════════════════════════════════════ */
+    #carModeScreen{
+      display:none;position:fixed;inset:0;z-index:300;
+      background:#030303;overflow:hidden;
+    }
+    #carModeScreen.open{display:grid}
+
+    /* Portrait fallback */
+    #carModeScreen{
+      grid-template-areas:"topbar" "left" "center" "right";
+      grid-template-rows:auto auto 1fr auto;
+      grid-template-columns:1fr;
+    }
+    /* Landscape (tablet) */
+    @media(orientation:landscape){
+      #carModeScreen{
+        grid-template-areas:"topbar topbar topbar" "left center right";
+        grid-template-rows:auto 1fr;
+        grid-template-columns:140px 1fr 160px;
+      }
+    }
+
+    .cm-topbar{
+      grid-area:topbar;
+      display:flex;justify-content:space-between;align-items:center;
+      padding:5px 12px;background:rgba(0,0,0,.7);border-bottom:1px solid #111;
+      z-index:10;
+    }
+    .cm-logo-sm{font-family:'Orbitron',sans-serif;font-size:9px;letter-spacing:3px;color:#222}
+    .cm-settings-row{display:flex;align-items:center;gap:6px;font-size:8px;color:var(--muted)}
+    .cm-settings-row input{width:52px;padding:3px 6px;font-size:9px;background:#111;border:1px solid #2a2a2a;border-radius:3px;color:var(--text);font-family:'JetBrains Mono',monospace}
+    .cm-exit{padding:4px 12px;background:rgba(255,32,32,.12);border:1px solid rgba(255,32,32,.3);color:var(--red);border-radius:5px;font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase}
+
+    /* LEFT panel: gear + mic */
+    .cm-left{
+      grid-area:left;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:10px;padding:10px;border-bottom:1px solid #111;
+    }
+    @media(orientation:landscape){
+      .cm-left{border-bottom:none;border-right:1px solid #111;padding:12px 10px}
+    }
+    .cm-gear-num{
+      font-family:'Orbitron',sans-serif;font-weight:900;
+      font-size:clamp(44px,10vmin,88px);
+      color:var(--red);text-shadow:0 0 30px rgba(255,32,32,.7);line-height:1;
+    }
+    .cm-gear-lbl{font-size:8px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:-2px}
+    .mic-pill{
+      display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:20px;
+      border:1px solid var(--border);font-size:8px;letter-spacing:1px;color:var(--muted);
+      cursor:pointer;transition:all .2s;background:#0a0a0a;
+    }
+    .mic-pill.active{border-color:var(--green);color:var(--green);background:rgba(0,255,136,.07)}
+    .mic-dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+    .mic-pill.active .mic-dot{background:var(--green);box-shadow:0 0 5px var(--green);animation:blink .8s infinite}
+    .conf-wrap{width:100%;max-width:110px}
+    .conf-lbl{font-size:7px;color:var(--muted);letter-spacing:1px;margin-bottom:3px;text-align:center}
+    .conf-bar{height:3px;background:#1a1a1a;border-radius:2px;overflow:hidden}
+    .conf-fill{height:100%;width:0%;border-radius:2px;transition:width .4s}
+
+    /* CALIBRATION panel */
+    .calib-box{
+      background:#0f0f0f;border:1px solid rgba(0,229,255,.2);border-radius:7px;
+      padding:10px;width:100%;text-align:center;font-size:9px;
+    }
+    .calib-box.hidden{display:none}
+    .calib-ttl{font-size:7px;color:var(--cyan);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px}
+    .calib-status{color:#aaa;line-height:1.6;margin-bottom:7px;font-size:9px}
+    .calib-status b{color:var(--yellow)}
+    .btn-calib{width:100%;padding:8px;background:rgba(0,229,255,.15);border:1px solid var(--cyan);color:var(--cyan);border-radius:5px;font-family:'Orbitron',sans-serif;font-size:8px;letter-spacing:1px;cursor:pointer;text-transform:uppercase}
+    .btn-calib:disabled{opacity:.4;cursor:not-allowed}
+    .calib-result{font-size:9px;color:var(--green);margin-top:5px}
+
+    /* CENTER: tachometer */
+    .cm-center{
+      grid-area:center;
+      display:flex;align-items:center;justify-content:center;
+      position:relative;padding:6px;
+    }
+    .tacho-wrap{
+      position:relative;
+      width:min(75vmin,380px);
+      aspect-ratio:1/1;
+    }
+    @media(orientation:landscape){
+      .tacho-wrap{width:min(72vh,360px)}
+    }
+    canvas#tachoCanvas{width:100%;height:100%;display:block}
+    .tacho-center{
+      position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      text-align:center;pointer-events:none;
+    }
+    .tacho-rpm-val{font-family:'Orbitron',sans-serif;font-size:clamp(16px,3.5vmin,28px);font-weight:900;color:#fff;line-height:1}
+    .tacho-rpm-unit{font-size:7px;color:var(--muted);letter-spacing:2px;margin-top:2px}
+    .tacho-source{font-size:7px;color:var(--muted);margin-top:3px;letter-spacing:1px}
+
+    /* RIGHT: numeric gauges */
+    .cm-right{
+      grid-area:right;
+      display:flex;flex-direction:row;justify-content:space-around;align-items:center;
+      padding:10px 12px;gap:8px;border-top:1px solid #111;
+    }
+    @media(orientation:landscape){
+      .cm-right{
+        flex-direction:column;justify-content:center;
+        border-top:none;border-left:1px solid #111;
+        padding:12px 10px;gap:10px;
+      }
+    }
+    .cm-gauge{
+      background:#0a0a0a;border:1px solid #1e1e1e;border-radius:9px;
+      padding:9px 10px;text-align:center;position:relative;overflow:hidden;flex:1;
+    }
+    @media(orientation:landscape){.cm-gauge{flex:none;width:100%}}
+    .cm-gauge::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--cac,#333);box-shadow:0 0 5px var(--cac,#333)}
+    .cm-glbl{font-size:7px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px}
+    .cm-gval{font-family:'Orbitron',sans-serif;font-size:clamp(18px,3vw,28px);font-weight:700;color:var(--cac,#aaa);line-height:1}
+    .cm-gunit{font-size:7px;color:var(--muted);margin-top:2px}
+    .cm-speed{--cac:var(--cyan)}.cm-power{--cac:var(--red)}.cm-torque{--cac:var(--yellow)}
+  </style>
+</head>
+<body>
+
+<!-- ══ DISCLAIMER ══ -->
+<div id="disclaimerScreen">
+  <div class="disc-logo">GPS<span>DYNO</span></div>
+
+  <div class="disc-box">
+    <div class="disc-row"><span class="disc-icon">🚗</span><div class="disc-text">Usa l'app <b>come passeggero</b> oppure con il dispositivo su un supporto fisso — mai tenuto in mano durante la guida.</div></div>
+    <div class="disc-row"><span class="disc-icon">📍</span><div class="disc-text">Effettua le misurazioni <b>solo su strade private o circuiti</b>, lontano da altri veicoli e pedoni.</div></div>
+    <div class="disc-row"><span class="disc-icon">⚖️</span><div class="disc-text"><b>Rispetta il codice della strada.</b> Qualsiasi infrazione è responsabilità esclusiva del conducente.</div></div>
+    <div class="disc-row"><span class="disc-icon">📊</span><div class="disc-text">I valori di potenza e coppia sono <b>stime fisiche</b> e possono differire da un banco a rulli.</div></div>
+  </div>
+
+  <label class="disc-check">
+    <input type="checkbox" id="agreeCheck" onchange="onCheckChange()"/>
+    <div class="disc-check-txt">Ho letto e accetto. Userò GPS Dyno <b>in modo responsabile</b>, rispettando le norme di sicurezza stradale.</div>
+  </label>
+
+  <button class="btn-disc" id="enterBtn" disabled onclick="enterApp()" style="width:100%;max-width:500px;margin-bottom:12px">ENTRA NELL'APP</button>
+  <div class="disc-legal" style="padding-bottom:env(safe-area-inset-bottom,16px)">GPS Dyno non è responsabile per danni derivanti dall'uso improprio dell'app.</div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="mainApp" style="display:none">
+  <header>
+    <div class="logo">GPS<span>DYNO</span></div>
+    <div class="hdr-right">
+      <button class="btn-carmode" onclick="openCarMode()">🚗 CAR MODE</button>
+      <div class="gps-status">
+        <div class="gps-dot" id="gpsDot"></div>
+        <span id="gpsLabel">NO GPS</span>
+      </div>
+    </div>
+  </header>
+
+  <nav>
+    <button class="active" onclick="showPage('measure',this)">⚡ MISURA</button>
+    <button onclick="showPage('chart',this)">📈 CURVA</button>
+    <button onclick="showPage('runs',this)">🏁 RUNS</button>
+    <button onclick="showPage('cars',this)">🚗 AUTO</button>
+  </nav>
+
+  <!-- MEASURE -->
+  <div class="page active" id="page-measure">
+    <div class="rec-ind" id="recInd"><div class="rec-dot"></div>REC — <span id="recTime">0.0s</span></div>
+    <div class="g2">
+      <div class="gauge gc"><div class="glabel">VELOCITÀ</div><div class="gval" id="gSpeed">0</div><div class="gunit">km/h</div></div>
+      <div class="gauge go"><div class="glabel">ACCEL.</div><div class="gval" id="gAccel">0.00</div><div class="gunit">m/s²</div></div>
+    </div>
+    <div class="g3">
+      <div class="gauge gr"><div class="glabel">POTENZA</div><div class="gval" id="gPower">—</div><div class="gunit">CV</div></div>
+      <div class="gauge gy"><div class="glabel">COPPIA</div><div class="gval" id="gTorque">—</div><div class="gunit">Nm</div></div>
+      <div class="gauge gg"><div class="glabel">RPM STIM.</div><div class="gval" id="gRpm">—</div><div class="gunit">giri</div></div>
+    </div>
+    <div class="sbar-wrap">
+      <div class="sbar-lbl"><span>0</span><span id="sbarVal">0 km/h</span><span>250</span></div>
+      <div class="sbar-track"><div class="sbar-fill" id="sBar"></div></div>
+    </div>
+    <div class="gear-panel">
+      <div class="gear-panel-title">MARCIA PER LA PROVA</div>
+      <div class="gear-row" id="gearRow"><span style="font-size:10px;color:var(--muted)">Prima seleziona un'auto →</span></div>
+    </div>
+    <div class="controls">
+      <button class="btn-main start" id="mainBtn" onclick="toggleMeasure()">▶ AVVIA MISURA</button>
+      <button class="btn-sec" onclick="resetSession()">↺ RESET</button>
+    </div>
+    <div class="info-box">
+      <b>AUTO:</b> <span id="infocar">Nessuna</span><br/>
+      <b>MARCIA:</b> <span id="infogear">—</span><br/>
+      <b>RAPPORTO:</b> <span id="inforatio">—</span><br/>
+      <b>GOMME:</b> <span id="infotyre">—</span>
+    </div>
+    <div class="disc-bottom">⚠ Solo su strade sicure. Rispetta il codice della strada.</div>
+  </div>
+
+  <!-- CHART -->
+  <div class="page" id="page-chart">
+    <div id="chartWrap"><div class="no-data"><div class="no-data-icon">📊</div><p>Nessun dato.<br/>Fai una misurazione prima.</p></div></div>
+  </div>
+
+  <!-- RUNS -->
+  <div class="page" id="page-runs">
+    <div class="sec-ttl">SESSIONI SALVATE</div>
+    <div class="run-list" id="runList"><div class="no-data"><div class="no-data-icon">🏁</div><p>Nessuna sessione ancora.</p></div></div>
+  </div>
+
+  <!-- CARS -->
+  <div class="page" id="page-cars">
+    <div class="sec-ttl">DATABASE AUTO</div>
+    <div class="car-list" id="carList"></div>
+    <div class="car-form" id="carForm">
+      <div class="form-ttl" id="formTitle">+ AGGIUNGI AUTO</div>
+      <div class="fr2">
+        <div class="fr"><label>Marca</label><input id="cMake" placeholder="BMW"/></div>
+        <div class="fr"><label>Modello</label><input id="cModel" placeholder="M3"/></div>
+      </div>
+      <div class="fr3">
+        <div class="fr"><label>Anno</label><input type="number" id="cYear" placeholder="2023"/></div>
+        <div class="fr"><label>Massa (kg)</label><input type="number" id="cMass" placeholder="1500"/></div>
+        <div class="fr"><label>CV dich.</label><input type="number" id="cHp" placeholder="300"/></div>
+      </div>
+      <div class="fr3">
+        <div class="fr"><label>Trazione</label>
+          <select id="cDrive"><option value="RWD">RWD</option><option value="FWD">FWD</option><option value="AWD">AWD</option></select>
+        </div>
+        <div class="fr"><label>Cilindri 🎙️</label>
+          <select id="cCyl"><option value="3">3 cil</option><option value="4" selected>4 cil</option><option value="5">5 cil</option><option value="6">6 cil</option><option value="8">8 cil</option><option value="10">10 cil</option><option value="12">12 cil</option></select>
+        </div>
+        <div class="fr"><label>Gomme</label><input id="cTyre" placeholder="225/45R17"/></div>
+      </div>
+      <div class="ratios-wrap">
+        <div class="ratios-ttl">Rapporti di trasmissione</div>
+        <div class="ratios-hint">Rapporto singola marcia + rapporto finale (corona/pignone). Lascia vuote le marce non presenti.</div>
+        <div class="grrow"><div class="grlbl">Finale</div><input type="number" step="0.001" id="rFinal" placeholder="es. 3.91"/></div>
+        <div id="gearInputs"></div>
+      </div>
+      <button class="btn-update" id="btnUpdate" style="display:none" onclick="updateCar()">✓ AGGIORNA AUTO</button>
+      <button class="btn-cancel-edit" id="btnCancelEdit" style="display:none" onclick="cancelEdit()">✕ ANNULLA MODIFICA</button>
+      <button class="btn-add" id="btnAdd" onclick="addCar()">AGGIUNGI AL DATABASE</button>
+    </div>
+  </div>
+</div><!-- /mainApp -->
+
+<!-- ══ CAR MODE ══ -->
+<div id="carModeScreen">
+  <div class="cm-topbar">
+    <div class="cm-logo-sm">GPSDYNO</div>
+    <div class="cm-settings-row">
+      <span>Max:</span><input type="number" id="rpmMax" value="8000" step="500" onchange="redrawTacho()"/>
+      <span>Redline:</span><input type="number" id="rpmRedline" value="7000" step="500" onchange="redrawTacho()"/>
+    </div>
+    <button class="cm-exit" onclick="closeCarMode()">✕ ESCI</button>
+  </div>
+
+  <!-- LEFT -->
+  <div class="cm-left">
+    <div style="text-align:center">
+      <div class="cm-gear-num" id="cmGearNum">—</div>
+      <div class="cm-gear-lbl">MARCIA</div>
+    </div>
+
+    <div class="mic-pill" id="micPill" onclick="toggleMic()">
+      <div class="mic-dot" id="micDot"></div>
+      <span id="micLabel">MIC OFF</span>
+    </div>
+
+    <div class="conf-wrap" id="confWrap" style="display:none">
+      <div class="conf-lbl">SEGNALE</div>
+      <div class="conf-bar"><div class="conf-fill" id="confFill"></div></div>
+    </div>
+
+    <!-- CALIBRATION BOX -->
+    <div class="calib-box hidden" id="calibBox">
+      <div class="calib-ttl">🎯 CALIBRAZIONE</div>
+      <div class="calib-status" id="calibStatus">Porta il motore a <b>3000 RPM</b> stabili e tieni premuto il pulsante.</div>
+      <button class="btn-calib" id="btnCalib" onclick="startCalibration()">TIENI PREMUTO — CALIBRA</button>
+      <div class="calib-result" id="calibResult"></div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="cm-center">
+    <div class="tacho-wrap">
+      <canvas id="tachoCanvas"></canvas>
+      <div class="tacho-center">
+        <div class="tacho-rpm-val" id="cmRpmVal">0</div>
+        <div class="tacho-rpm-unit">RPM</div>
+        <div class="tacho-source" id="rpmSource">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="cm-right">
+    <div class="cm-gauge cm-speed">
+      <div class="cm-glbl">VELOCITÀ</div>
+      <div class="cm-gval" id="cmSpeed">0</div>
+      <div class="cm-gunit">km/h</div>
+    </div>
+    <div class="cm-gauge cm-power">
+      <div class="cm-glbl">POTENZA</div>
+      <div class="cm-gval" id="cmPower">—</div>
+      <div class="cm-gunit">CV</div>
+    </div>
+    <div class="cm-gauge cm-torque">
+      <div class="cm-glbl">COPPIA</div>
+      <div class="cm-gval" id="cmTorque">—</div>
+      <div class="cm-gunit">Nm</div>
+    </div>
+  </div>
+</div>
+
+<!-- GEAR MODAL -->
+<div class="overlay" id="gearOverlay">
+  <div class="modal">
+    <div class="modal-ttl">SELEZIONA MARCIA</div>
+    <div class="modal-sub" id="gearModalSub"></div>
+    <div class="mg-list" id="gearModalList"></div>
+    <hr class="sep"/>
+    <button class="btn-cancel" onclick="closeGearModal()">ANNULLA</button>
+  </div>
+</div>
+
+<!-- WIZARD MODAL -->
+<div class="overlay" id="wizOverlay">
+  <div class="modal">
+    <div class="modal-ttl">🔍 CALCOLO RAPPORTO</div>
+    <div class="modal-sub">Non conosci il rapporto? Lo calcoliamo da RPM e velocità.</div>
+    <div class="wizard-box">
+      <div class="wiz-ttl">METODO: RPM a velocità costante</div>
+      <div class="wiz-body">Guida in piano a velocità costante nella marcia desiderata e annota gli RPM del contagiri.</div>
+      <div class="fr2">
+        <div class="fr"><label>Velocità (km/h)</label><input type="number" id="wSpeed" value="60" placeholder="60"/></div>
+        <div class="fr"><label>RPM contagiri</label><input type="number" id="wRpm" placeholder="2000"/></div>
+      </div>
+      <div class="fr"><label>Numero marcia</label>
+        <select id="wGear"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option><option>7</option></select>
+      </div>
+      <button class="btn-wiz" onclick="calcWizard()">CALCOLA RAPPORTO</button>
+    </div>
+    <div class="wiz-result" id="wizResult"></div>
+    <hr class="sep"/>
+    <button class="btn-cancel" onclick="closeWizardModal()">ANNULLA</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const CD=0.30,FRONT=2.2,RHO=1.225,ROLL=0.013,G=9.81,DL=0.15,MAX_G=7;
+const CALIB_RPM=3000;           // reference RPM during calibration
+const CALIB_DURATION_MS=3000;   // how long to hold for calibration
+const GEAR_CONFIRM_FRAMES=6;    // frames before confirming gear change
+const MIN_SPEED_KMH=10;         // below this don't detect gear
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+const S={
+  measuring:false,gpsActive:false,watchId:null,
+  speed:0,lastSpeed:0,lastTime:null,
+  points:[],sessionT:null,
+  car:null,gear:null,totalRatio:null,wheelR:null,
+  cars:[],runs:[],
+  liveKmh:0,liveCv:0,liveTorque:0,liveRpm:0,
+  rpmSource:'GPS',
+};
+
+// Car Mode
+let carModeOpen=false;
+let tachoRAF=null;
+let smoothedRpm=0;
+
+// Mic / FFT
+let micStream=null,audioCtx=null,analyser=null,micActive=false,micRafId=null;
+// Calibration
+let calibFreqHz=null;         // dominant Hz at 3000 RPM (measured)
+let calibrating=false;
+let calibSamples=[];
+let calibTimer=null;
+// Gear detection vote
+let gearVotes={};
+let detectedGear=null;
+let lastMicRpm=0;
+let micSignalOk=false;
+
+// Edit mode
+let editingCarId=null;
+
+// ═══════════════════════════════════════════════════════
+// DISCLAIMER
+// ═══════════════════════════════════════════════════════
+function onCheckChange(){
+  const ok=document.getElementById('agreeCheck').checked;
+  const btn=document.getElementById('enterBtn');
+  btn.disabled=!ok;
+  btn.classList.toggle('ready',ok);
+}
+function enterApp(){
+  document.getElementById('disclaimerScreen').style.display='none';
+  document.getElementById('mainApp').style.display='block';
+  load();buildGearInputs();renderCarList();
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// ═══════════════════════════════════════════════════════
+// TYRE
+// ═══════════════════════════════════════════════════════
+function parseTyre(s){
+  const m=(s||'').trim().toUpperCase().match(/^(\d+)\/(\d+)R(\d+)$/);
+  if(!m) return null;
+  return(+m[3]*25.4+2*(+m[1])*(+m[2]/100))/2/1000;
+}
+
+// ═══════════════════════════════════════════════════════
+// PHYSICS
+// ═══════════════════════════════════════════════════════
+function calcPower(v,a,mass){
+  const Fw=mass*a+.5*RHO*CD*FRONT*v*v+ROLL*mass*G;
+  const Pe=Fw*v/(1-DL);
+  const cv=Math.max(Pe/735.499,0);
+  let rpm=null,torque=0;
+  if(S.totalRatio&&S.wheelR){
+    const oe=(v/S.wheelR)*S.totalRatio;
+    rpm=Math.max(oe*60/(2*Math.PI),0);
+    torque=oe>0?Math.max(Pe/oe,0):0;
+  } else torque=Math.max(Fw*(S.wheelR||.31),0);
+  return{cv,torque,rpm};
+}
+
+// Given measured RPM and current speed, find best matching gear
+function detectGearFromRpm(speedMs,rpm){
+  const c=S.car;
+  if(!c||!c.gears||!c.gears.length||!S.wheelR||speedMs<MIN_SPEED_KMH/3.6) return null;
+  const fd=c.finalDrive||1;
+  let best=null,bestDiff=Infinity;
+  c.gears.forEach((ratio,i)=>{
+    const total=ratio*fd;
+    const expectedRpm=(speedMs/S.wheelR)*total*60/(2*Math.PI);
+    const diff=Math.abs(expectedRpm-rpm);
+    if(diff<bestDiff){bestDiff=diff;best={gear:i+1,diff,total,ratio};}
+  });
+  if(!best) return null;
+  // confidence: 1.0 if diff<100rpm, 0 if diff>600rpm
+  const conf=Math.max(0,1-best.diff/600);
+  return{...best,confidence:conf};
+}
+
+// ═══════════════════════════════════════════════════════
+// MICROPHONE — CALIBRATION + GEAR DETECTION
+// ═══════════════════════════════════════════════════════
+async function toggleMic(){
+  if(micActive) stopMic();
+  else await startMic();
+}
+
+async function startMic(){
+  try{
+    micStream=await navigator.mediaDevices.getUserMedia({audio:{
+      echoCancellation:false,noiseSuppression:false,autoGainControl:false,
+    }});
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:44100});
+    analyser=audioCtx.createAnalyser();
+    analyser.fftSize=8192;
+    analyser.smoothingTimeConstant=0.65;
+    const src=audioCtx.createMediaStreamSource(micStream);
+    src.connect(analyser);
+    micActive=true;
+    updateMicUI(true);
+    document.getElementById('confWrap').style.display='block';
+    document.getElementById('calibBox').classList.remove('hidden');
+    micRafId=requestAnimationFrame(micLoop);
+  }catch(e){
+    alert('Impossibile accedere al microfono: '+e.message);
+  }
+}
+
+function stopMic(){
+  micActive=false;
+  if(micRafId){cancelAnimationFrame(micRafId);micRafId=null;}
+  if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;}
+  if(audioCtx){audioCtx.close();audioCtx=null;}
+  if(calibTimer){clearTimeout(calibTimer);calibTimer=null;}
+  analyser=null;calibrating=false;calibSamples=[];
+  updateMicUI(false);
+  document.getElementById('confWrap').style.display='none';
+  document.getElementById('calibBox').classList.add('hidden');
+  document.getElementById('confFill').style.width='0%';
+  document.getElementById('confFill').style.background='var(--green)';
+  lastMicRpm=0;micSignalOk=false;gearVotes={};detectedGear=null;
+}
+
+function updateMicUI(active){
+  const pill=document.getElementById('micPill');
+  pill.classList.toggle('active',active);
+  document.getElementById('micLabel').textContent=active?'MIC ON':'MIC OFF';
+}
+
+// Get dominant frequency in a range [minHz, maxHz]
+function getDominantFreq(minHz,maxHz){
+  if(!analyser||!audioCtx) return null;
+  const sr=audioCtx.sampleRate;
+  const buf=new Float32Array(analyser.frequencyBinCount);
+  analyser.getFloatFrequencyData(buf);
+  const fpb=sr/analyser.fftSize;
+  const minB=Math.floor(minHz/fpb);
+  const maxB=Math.min(Math.floor(maxHz/fpb),buf.length-1);
+  let peakB=minB,peakV=-Infinity;
+  for(let i=minB;i<=maxB;i++){if(buf[i]>peakV){peakV=buf[i];peakB=i;}}
+  // SNR: peak vs average in range
+  let sum=0;for(let i=minB;i<=maxB;i++) sum+=buf[i];
+  const avg=sum/(maxB-minB+1);
+  const snr=peakV-avg;
+  return{freq:peakB*fpb,snr,peakDb:peakV};
+}
+
+// ── CALIBRATION ──────────────────────────────────────
+function startCalibration(){
+  if(!micActive) return;
+  calibrating=true;calibSamples=[];
+  const btn=document.getElementById('btnCalib');
+  const status=document.getElementById('calibStatus');
+  const result=document.getElementById('calibResult');
+  btn.disabled=true;
+  result.textContent='';
+  status.innerHTML='<b>Tieni il motore a 3000 RPM...</b><br/>Sto registrando...';
+
+  // Collect samples for CALIB_DURATION_MS
+  const interval=setInterval(()=>{
+    if(!micActive){clearInterval(interval);return;}
+    // Search in wide range 20-500 Hz to find the engine fundamental
+    const r=getDominantFreq(20,500);
+    if(r&&r.snr>6&&r.peakDb>-55) calibSamples.push(r.freq);
+  },100);
+
+  calibTimer=setTimeout(()=>{
+    clearInterval(interval);
+    calibrating=false;
+    btn.disabled=false;
+    if(calibSamples.length<10){
+      status.innerHTML='<b style="color:var(--red)">Segnale troppo debole.</b><br/>Avvicina il microfono al motore o aumenta il volume.';
+      return;
+    }
+    // Median frequency at 3000 RPM
+    calibSamples.sort((a,b)=>a-b);
+    calibFreqHz=calibSamples[Math.floor(calibSamples.length/2)];
+    result.textContent=`✓ Calibrato: ${calibFreqHz.toFixed(1)} Hz @ ${CALIB_RPM} RPM`;
+    status.innerHTML=`Il microfono è calibrato.<br/>Ora rilevo la marcia automaticamente.`;
+    // store calibration
+    localStorage.setItem('gd_calib',JSON.stringify({freq:calibFreqHz,carId:S.car?.id}));
+  },CALIB_DURATION_MS);
+}
+
+// ── MIC LOOP ─────────────────────────────────────────
+function micLoop(){
+  if(!micActive||!analyser){return;}
+  micRafId=requestAnimationFrame(micLoop);
+  if(calibrating) return; // don't interfere during calibration
+
+  if(!calibFreqHz){
+    // Not calibrated yet — just show signal strength
+    const r=getDominantFreq(20,500);
+    if(r){
+      const norm=Math.max(0,Math.min(1,(r.snr-3)/20));
+      setConfBar(norm,'var(--muted)');
+    }
+    return;
+  }
+
+  // We have a calibration reference: calibFreqHz = freq at CALIB_RPM
+  // So: RPM = (currentFreq / calibFreqHz) * CALIB_RPM
+  // Search around calibrated frequency ±60% to cover all gear RPM ranges
+  const searchMin=calibFreqHz*0.10;  // ~300rpm relative
+  const searchMax=calibFreqHz*3.50;  // ~10500rpm relative (covers high revs)
+  const r=getDominantFreq(Math.max(15,searchMin),Math.min(800,searchMax));
+  if(!r) return;
+
+  micSignalOk=r.snr>7&&r.peakDb>-58;
+  const norm=micSignalOk?Math.max(0,Math.min(1,(r.snr-7)/18)):0;
+  setConfBar(norm,micSignalOk?'var(--green)':'#444');
+
+  if(!micSignalOk){
+    lastMicRpm=0;
+    return;
+  }
+
+  // Compute RPM from ratio
+  const rpmFromMic=(r.freq/calibFreqHz)*CALIB_RPM;
+  // Smooth mic RPM slightly
+  lastMicRpm=lastMicRpm*0.5+rpmFromMic*0.5;
+
+  // Feed into live RPM (overrides GPS estimate)
+  if(lastMicRpm>300&&lastMicRpm<12000){
+    S.liveRpm=lastMicRpm;
+    S.rpmSource='MIC';
+  }
+
+  // Gear detection via vote system
+  if(S.speed>MIN_SPEED_KMH/3.6){
+    const res=detectGearFromRpm(S.speed,lastMicRpm);
+    if(res&&res.confidence>0.35){
+      const g=res.gear;
+      if(!gearVotes[g]) gearVotes[g]=0;
+      gearVotes[g]++;
+      Object.keys(gearVotes).forEach(k=>{if(+k!==g) gearVotes[k]=Math.max(0,(gearVotes[k]||0)-1);});
+      const winner=Object.entries(gearVotes).sort((a,b)=>b[1]-a[1])[0];
+      if(winner&&+winner[1]>=GEAR_CONFIRM_FRAMES){
+        const ng=+winner[0];
+        if(ng!==detectedGear){
+          detectedGear=ng;
+          applyDetectedGear(ng,res);
+        }
+      }
+    }
+  }
+
+  document.getElementById('cmRpmVal').textContent=Math.round(lastMicRpm).toLocaleString('it');
+  document.getElementById('rpmSource').textContent='🎙️ MIC';
+}
+
+function setConfBar(val,color){
+  const f=document.getElementById('confFill');
+  f.style.width=Math.round(val*100)+'%';
+  f.style.background=color;
+}
+
+function applyDetectedGear(gearNum,res){
+  document.getElementById('cmGearNum').textContent=gearNum;
+  if(res.confidence>0.65&&S.car&&S.car.gears){
+    S.gear=gearNum;
+    S.totalRatio=res.total;
+    refreshGearUI(gearNum,res.ratio,res.total);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// PERSIST
+// ═══════════════════════════════════════════════════════
+function save(){
+  localStorage.setItem('gd_cars',JSON.stringify(S.cars));
+  localStorage.setItem('gd_runs',JSON.stringify(S.runs));
+}
+function load(){
+  try{
+    S.cars=JSON.parse(localStorage.getItem('gd_cars')||'[]');
+    S.runs=JSON.parse(localStorage.getItem('gd_runs')||'[]');
+    // Restore calibration if same car
+    const cal=JSON.parse(localStorage.getItem('gd_calib')||'null');
+    if(cal&&S.car&&cal.carId===S.car.id) calibFreqHz=cal.freq;
+  }catch(e){}
+  if(!S.cars.length) seed();
+}
+function seed(){
+  S.cars=[
+    {id:1,make:'VW',model:'Golf GTI',year:2021,mass:1340,drive:'FWD',hp:245,tyre:'225/40R18',finalDrive:3.94,gears:[3.77,2.11,1.36,1.03,0.84,0.67],cylinders:4},
+    {id:2,make:'BMW',model:'330i',year:2022,mass:1540,drive:'RWD',hp:258,tyre:'225/45R17',finalDrive:3.46,gears:[4.17,2.34,1.52,1.14,0.87,0.69,0.58],cylinders:4},
+    {id:3,make:'Fiat',model:'Punto 1.2',year:2008,mass:1020,drive:'FWD',hp:65,tyre:'175/65R14',finalDrive:3.94,gears:[3.58,1.94,1.28,0.97,0.76],cylinders:4},
+    {id:4,make:'Audi',model:'RS6',year:2023,mass:2075,drive:'AWD',hp:600,tyre:'285/40R22',finalDrive:2.77,gears:[5.00,2.86,1.92,1.37,1.00,0.82,0.67],cylinders:8},
+  ];save();
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id==='chart') renderChart();
+  if(id==='cars'){buildGearInputs();renderCarList();}
+  if(id==='runs') renderRunList();
+}
+function navTo(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach((b,i)=>{
+    b.classList.remove('active');
+    if(['measure','chart','runs','cars'][i]===id) b.classList.add('active');
+  });
+  document.getElementById('page-'+id).classList.add('active');
+  if(id==='chart') renderChart();
+}
+
+// ═══════════════════════════════════════════════════════
+// GPS
+// ═══════════════════════════════════════════════════════
+function startGPS(){
+  if(!('geolocation' in navigator)){alert('GPS non disponibile.');return;}
+  S.watchId=navigator.geolocation.watchPosition(onGPS,onGPSErr,{
+    enableHighAccuracy:true,maximumAge:0,timeout:8000
+  });
+}
+function onGPS(pos){
+  const now=pos.timestamp,v=pos.coords.speed||0;
+  setGPSStatus(S.measuring?'measuring':'active');
+  const kmh=v*3.6;
+  let a=0;
+  if(S.lastTime){const dt=(now-S.lastTime)/1000;if(dt>0&&dt<2) a=(v-S.lastSpeed)/dt;}
+  S.speed=v;S.lastSpeed=v;S.lastTime=now;
+
+  document.getElementById('gSpeed').textContent=kmh.toFixed(0);
+  document.getElementById('gAccel').textContent=a.toFixed(2);
+  document.getElementById('sBar').style.width=Math.min(kmh/250*100,100)+'%';
+  document.getElementById('sbarVal').textContent=kmh.toFixed(0)+' km/h';
+
+  let cv=0,torque=0,rpm=null;
+  if(S.car&&a>0.2){
+    const r=calcPower(v,a,S.car.mass);
+    cv=r.cv;torque=r.torque;rpm=r.rpm;
+    document.getElementById('gPower').textContent=cv.toFixed(0);
+    document.getElementById('gTorque').textContent=torque.toFixed(0);
+    document.getElementById('gRpm').textContent=rpm!==null?Math.round(rpm).toLocaleString('it'):'—';
+    if(S.measuring&&kmh>=20&&kmh<=280)
+      S.points.push({speed_kmh:kmh,accel:a,power_cv:cv,torque_nm:torque,rpm,t:now});
+  } else if(!S.car){
+    ['gPower','gTorque','gRpm'].forEach(id=>document.getElementById(id).textContent='—');
+  }
+
+  S.liveKmh=kmh;S.liveCv=cv;S.liveTorque=torque;
+
+  // RPM: prefer mic if calibrated and signal ok, else GPS estimate
+  if(!micActive||!calibFreqHz||!micSignalOk){
+    if(rpm!==null){S.liveRpm=rpm;S.rpmSource='GPS';}
+    else if(S.totalRatio&&S.wheelR){
+      S.liveRpm=Math.max((v/S.wheelR)*S.totalRatio*60/(2*Math.PI),0);
+      S.rpmSource='GPS';
+    }
+  }
+}
+function onGPSErr(){setGPSStatus('inactive');}
+function setGPSStatus(s){
+  const d=document.getElementById('gpsDot'),l=document.getElementById('gpsLabel');
+  d.className='gps-dot';
+  if(s==='active'){d.classList.add('active');l.textContent='GPS OK';}
+  else if(s==='measuring'){d.classList.add('measuring');l.textContent='REC';}
+  else l.textContent='NO GPS';
+  S.gpsActive=s!=='inactive';
+}
+
+// ═══════════════════════════════════════════════════════
+// MEASURE
+// ═══════════════════════════════════════════════════════
+let recTmr=null;
+function toggleMeasure(){
+  if(!S.car){alert('Seleziona un\'auto nella scheda AUTO.');return;}
+  if(!S.gear){openGearModal();return;}
+  if(!S.gpsActive){startGPS();setTimeout(()=>{if(!S.gpsActive)alert('Attendendo GPS…');},2500);return;}
+  if(!S.measuring){
+    S.measuring=true;S.points=[];S.sessionT=Date.now();
+    document.getElementById('mainBtn').textContent='⏹ FERMA MISURA';
+    document.getElementById('mainBtn').className='btn-main stop';
+    document.getElementById('recInd').classList.add('vis');
+    recTmr=setInterval(()=>{document.getElementById('recTime').textContent=((Date.now()-S.sessionT)/1000).toFixed(1)+'s';},100);
+    setGPSStatus('measuring');
+  } else stopMeasure();
+}
+function stopMeasure(){
+  S.measuring=false;clearInterval(recTmr);
+  document.getElementById('mainBtn').textContent='▶ AVVIA MISURA';
+  document.getElementById('mainBtn').className='btn-main start';
+  document.getElementById('recInd').classList.remove('vis');
+  setGPSStatus('active');
+  if(S.points.length>5){saveRun();navTo('chart');}
+  else alert('Dati insufficienti. Accelera almeno 5 secondi.');
+}
+function resetSession(){
+  S.points=[];
+  ['gPower','gTorque','gRpm'].forEach(id=>document.getElementById(id).textContent='—');
+  document.getElementById('gSpeed').textContent='0';
+  document.getElementById('gAccel').textContent='0.00';
+}
+
+// ═══════════════════════════════════════════════════════
+// GEAR MODAL
+// ═══════════════════════════════════════════════════════
+function openGearModal(){
+  const c=S.car;if(!c) return;
+  const g=c.gears||[],fd=c.finalDrive||1,r=S.wheelR;
+  let html=g.map((ratio,i)=>{
+    const tot=ratio*fd;
+    let note='';
+    if(r){const v=(2000*2*Math.PI/60)/tot*r*3.6;note=` · ${v.toFixed(0)} km/h@2krpm`;}
+    return`<div class="mg-item" onclick="selectGear(${i+1},${ratio},${tot})">
+      <div class="mg-num">${i+1}</div>
+      <div><div class="mg-rv">Rapporto: ${ratio.toFixed(3)} × ${fd.toFixed(3)}</div>
+      <div class="mg-info">Totale: ${tot.toFixed(3)}${note}</div></div></div>`;
+  }).join('');
+  html+=`<div class="mg-item" onclick="openWizardModal()" style="border-color:var(--cyan)">
+    <div style="font-family:'Orbitron',sans-serif;font-size:20px;color:var(--cyan)">?</div>
+    <div><div class="mg-rv" style="color:var(--cyan)">Non conosco i rapporti</div>
+    <div class="mg-info">Calcola da RPM + velocità</div></div></div>`;
+  document.getElementById('gearModalList').innerHTML=html;
+  document.getElementById('gearModalSub').textContent=`${c.make} ${c.model} — finale: ${fd.toFixed(3)}`;
+  document.getElementById('gearOverlay').classList.add('open');
+}
+function closeGearModal(){document.getElementById('gearOverlay').classList.remove('open');}
+function selectGear(num,ratio,total){
+  S.gear=num;S.totalRatio=total;
+  closeGearModal();refreshGearUI(num,ratio,total);
+  if(!S.gpsActive) startGPS();
+  document.getElementById('cmGearNum').textContent=num;
+}
+function refreshGearUI(num,ratio,total){
+  const c=S.car;
+  const row=document.getElementById('gearRow');
+  if(c&&c.gears&&c.gears.length)
+    row.innerHTML=c.gears.map((_,i)=>`<button class="gear-btn${S.gear===i+1?' sel':''}" onclick="openGearModal()">${i+1}</button>`).join('')+
+      `<button class="gear-btn unk" onclick="openGearModal()">?</button>`;
+  document.getElementById('infogear').textContent=num+'ª marcia';
+  const fd=c&&c.finalDrive?c.finalDrive.toFixed(3):'?';
+  document.getElementById('inforatio').textContent=total!==null?`${total.toFixed(3)} (${ratio?ratio.toFixed(3):'wiz'}×${fd})`:'—';
+}
+
+// ═══════════════════════════════════════════════════════
+// WIZARD
+// ═══════════════════════════════════════════════════════
+function openWizardModal(){closeGearModal();document.getElementById('wizResult').style.display='none';document.getElementById('wizOverlay').classList.add('open');}
+function closeWizardModal(){document.getElementById('wizOverlay').classList.remove('open');}
+function calcWizard(){
+  const spd=parseFloat(document.getElementById('wSpeed').value);
+  const rpm=parseFloat(document.getElementById('wRpm').value);
+  const gn=parseInt(document.getElementById('wGear').value);
+  const r=S.wheelR;
+  if(!spd||!rpm||spd<=0||rpm<=0){alert('Inserisci velocità e RPM validi.');return;}
+  if(!r){alert('Nessuna gomma configurata per questa auto.');return;}
+  const total=(rpm*2*Math.PI/60)*r/(spd/3.6);
+  const res=document.getElementById('wizResult');
+  res.style.display='block';
+  res.innerHTML=`<b style="color:var(--green)">✓ Rapporto calcolato</b><br/>
+    ${spd} km/h · ${rpm.toLocaleString('it')} RPM → Totale: <b style="color:var(--cyan)">${total.toFixed(4)}</b><br/>
+    <button class="btn-wiz" onclick="applyWizard(${gn},${total})" style="margin-top:8px">USA PER LA ${gn}ª MARCIA</button>`;
+}
+function applyWizard(gn,total){
+  S.gear=gn;S.totalRatio=total;closeWizardModal();
+  const row=document.getElementById('gearRow');
+  if(S.car&&S.car.gears&&S.car.gears.length)
+    row.innerHTML=S.car.gears.map((_,i)=>`<button class="gear-btn${S.gear===i+1?' sel':''}" onclick="openGearModal()">${i+1}</button>`).join('')+
+      `<button class="gear-btn unk" onclick="openGearModal()">?</button>`;
+  document.getElementById('infogear').textContent=gn+'ª marcia (wizard)';
+  document.getElementById('inforatio').textContent=`${total.toFixed(4)} (calcolato)`;
+  document.getElementById('cmGearNum').textContent=gn;
+  if(!S.gpsActive) startGPS();
+}
+
+// ═══════════════════════════════════════════════════════
+// DATA PROCESSING
+// ═══════════════════════════════════════════════════════
+function smooth(pts){
+  if(pts.length<3) return pts;
+  const bins={};
+  for(const p of [...pts].sort((a,b)=>a.speed_kmh-b.speed_kmh)){
+    const k=Math.round(p.speed_kmh/2)*2;if(!bins[k])bins[k]=[];bins[k].push(p);
+  }
+  const avg=a=>a.reduce((s,v)=>s+v,0)/a.length;
+  return Object.entries(bins).map(([k,p])=>({
+    speed_kmh:+k,power_cv:avg(p.map(x=>x.power_cv)),
+    torque_nm:avg(p.map(x=>x.torque_nm)),
+    rpm:p[0].rpm!==null?avg(p.filter(x=>x.rpm).map(x=>x.rpm)):null,
+  })).sort((a,b)=>a.speed_kmh-b.speed_kmh);
+}
+function getPeaks(pts){
+  let mp=0,mt=0,ms=0,mr=0;
+  for(const p of pts){if(p.power_cv>mp){mp=p.power_cv;ms=p.speed_kmh;mr=p.rpm||0;}if(p.torque_nm>mt)mt=p.torque_nm;}
+  return{power:mp,torque:mt,speed:ms,rpm:mr};
+}
+
+// ═══════════════════════════════════════════════════════
+// RUNS
+// ═══════════════════════════════════════════════════════
+function saveRun(){
+  const sm=smooth(S.points),pk=getPeaks(sm);
+  S.runs.unshift({id:Date.now(),date:new Date().toLocaleString('it-IT'),
+    car:S.car,gear:S.gear,totalRatio:S.totalRatio,
+    points:sm,peakPower:pk.power,peakTorque:pk.torque,peakRpm:pk.rpm,
+    duration:(Date.now()-S.sessionT)/1000});
+  save();
+}
+function renderRunList(){
+  const el=document.getElementById('runList');
+  if(!S.runs.length){el.innerHTML='<div class="no-data"><div class="no-data-icon">🏁</div><p>Nessuna sessione ancora.</p></div>';return;}
+  el.innerHTML=S.runs.map((r,i)=>`
+    <div class="run-item" onclick="loadRun(${i})">
+      <div><div class="cname">${r.car.make} ${r.car.model} — ${r.gear?r.gear+'ª':'?'} marcia</div>
+      <div class="run-date">${r.date} · ${r.duration.toFixed(1)}s</div></div>
+      <div style="text-align:right">
+        <div class="run-peak">${r.peakPower.toFixed(0)} CV</div>
+        <div class="cdet">${r.peakTorque.toFixed(0)} Nm${r.peakRpm?' @ '+Math.round(r.peakRpm).toLocaleString('it')+'rpm':''}</div>
+      </div>
+    </div>`).join('');
+}
+function loadRun(i){
+  const r=S.runs[i];S.points=r.points;S.gear=r.gear;S.totalRatio=r.totalRatio;
+  S.car=r.car;S.wheelR=r.car.tyre?parseTyre(r.car.tyre):.31;navTo('chart');
+}
+
+// ═══════════════════════════════════════════════════════
+// CHART
+// ═══════════════════════════════════════════════════════
+function renderChart(){
+  const wrap=document.getElementById('chartWrap');
+  if(S.points.length<3){wrap.innerHTML='<div class="no-data"><div class="no-data-icon">📊</div><p>Nessun dato.<br/>Esegui una misurazione prima.</p></div>';return;}
+  const sm=S.points,pk=getPeaks(sm);
+  const hasRpm=sm.some(p=>p.rpm&&p.rpm>0);
+  const xk=hasRpm?'rpm':'speed_kmh',xl=hasRpm?'RPM':'km/h';
+  const rpmLbl=pk.rpm?' @ '+Math.round(pk.rpm).toLocaleString('it')+' rpm':'';
+  wrap.innerHTML=`
+    <div class="chart-hdr">
+      <div><div class="chart-ttl">CURVA DI POTENZA</div>
+        <div class="chart-sub">${S.car?S.car.make+' '+S.car.model:''}${S.gear?' · '+S.gear+'ª':''}</div></div>
+      <div class="badges">
+        <div class="badge bp">⚡ ${pk.power.toFixed(0)} CV${rpmLbl}</div>
+        <div class="badge bt">🔩 ${pk.torque.toFixed(0)} Nm</div>
+      </div>
+    </div>
+    <canvas id="dynoChart"></canvas>
+    <div style="display:flex;gap:16px;margin-top:10px;font-size:9px;color:var(--muted)">
+      <span><span style="color:var(--red)">●</span> POTENZA (CV)</span>
+      <span><span style="color:var(--yellow)">●</span> COPPIA (Nm)</span>
+    </div>`;
+  const canvas=document.getElementById('dynoChart');
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=(canvas.offsetWidth||340)*dpr;canvas.height=260*dpr;canvas.style.height='260px';
+  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+  const W=canvas.width/dpr,H=canvas.height/dpr;
+  const pad={t:18,r:48,b:32,l:48},cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+  const pts=hasRpm?sm.filter(p=>p.rpm>0):sm;
+  if(pts.length<2) return;
+  const xs=pts.map(p=>p[xk]),pw=pts.map(p=>p.power_cv),tq=pts.map(p=>p.torque_nm);
+  const minX=Math.min(...xs),maxX=Math.max(...xs),maxP=Math.max(...pw)*1.1,maxT=Math.max(...tq)*1.1;
+  const xS=x=>pad.l+((x-minX)/(maxX-minX||1))*cW,yP=v=>pad.t+cH-(v/maxP)*cH,yT=v=>pad.t+cH-(v/maxT)*cH;
+  ctx.fillStyle='#1a1a1a';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#222';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pad.t+(cH/4)*i;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();}
+  // fills
+  ctx.beginPath();ctx.moveTo(xS(xs[0]),yT(tq[0]));pts.forEach((_,i)=>ctx.lineTo(xS(xs[i]),yT(tq[i])));
+  ctx.lineTo(xS(xs[pts.length-1]),pad.t+cH);ctx.lineTo(xS(xs[0]),pad.t+cH);ctx.closePath();ctx.fillStyle='rgba(255,208,0,.06)';ctx.fill();
+  ctx.beginPath();ctx.moveTo(xS(xs[0]),yP(pw[0]));pts.forEach((_,i)=>ctx.lineTo(xS(xs[i]),yP(pw[i])));
+  ctx.lineTo(xS(xs[pts.length-1]),pad.t+cH);ctx.lineTo(xS(xs[0]),pad.t+cH);ctx.closePath();
+  const g=ctx.createLinearGradient(0,pad.t,0,pad.t+cH);g.addColorStop(0,'rgba(255,32,32,.28)');g.addColorStop(1,'rgba(255,32,32,.02)');ctx.fillStyle=g;ctx.fill();
+  // lines
+  ctx.beginPath();ctx.strokeStyle='#ffd000';ctx.lineWidth=2;ctx.shadowColor='#ffd000';ctx.shadowBlur=5;
+  ctx.moveTo(xS(xs[0]),yT(tq[0]));pts.forEach((_,i)=>ctx.lineTo(xS(xs[i]),yT(tq[i])));ctx.stroke();
+  ctx.beginPath();ctx.strokeStyle='#ff2020';ctx.lineWidth=2.5;ctx.shadowColor='#ff2020';ctx.shadowBlur=10;
+  ctx.moveTo(xS(xs[0]),yP(pw[0]));pts.forEach((_,i)=>ctx.lineTo(xS(xs[i]),yP(pw[i])));ctx.stroke();ctx.shadowBlur=0;
+  const pi=pw.indexOf(Math.max(...pw));
+  if(pi>=0){ctx.beginPath();ctx.arc(xS(xs[pi]),yP(pw[pi]),4,0,Math.PI*2);ctx.fillStyle='#ff2020';ctx.shadowColor='#ff2020';ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;}
+  ctx.fillStyle='#555';ctx.font='9px JetBrains Mono,monospace';ctx.textAlign='center';
+  for(let i=0;i<=4;i++){const x=minX+((maxX-minX)/4)*i;ctx.fillText(hasRpm?Math.round(x).toLocaleString('it'):x.toFixed(0),xS(x),H-8);}
+  ctx.fillStyle='#444';ctx.fillText(xl,pad.l+cW/2,H-0);
+  ctx.textAlign='right';for(let i=0;i<=4;i++){const v=(maxP/4)*(4-i);ctx.fillStyle='#ff4444';ctx.fillText(v.toFixed(0),pad.l-3,yP(v)+3);}
+  ctx.textAlign='left';for(let i=0;i<=4;i++){const v=(maxT/4)*(4-i);ctx.fillStyle='#aa8800';ctx.fillText(v.toFixed(0),W-pad.r+3,yT(v)+3);}
+}
+
+// ═══════════════════════════════════════════════════════
+// CARS DATABASE — add / edit / delete
+// ═══════════════════════════════════════════════════════
+function buildGearInputs(){
+  const w=document.getElementById('gearInputs');if(!w)return;w.innerHTML='';
+  for(let i=1;i<=MAX_G;i++)
+    w.innerHTML+=`<div class="grrow"><div class="grlbl">${i}ª</div><input type="number" step="0.001" id="r${i}" placeholder="es. ${(4.5/i).toFixed(3)}"/></div>`;
+}
+
+function renderCarList(){
+  const el=document.getElementById('carList');
+  if(!S.cars.length){el.innerHTML='<div class="no-data"><p>Nessuna auto nel database.</p></div>';return;}
+  el.innerHTML=S.cars.map(c=>`
+    <div class="car-item${S.car&&S.car.id===c.id?' sel':''}">
+      <div class="car-item-top" onclick="selectCar(${c.id})">
+        <div>
+          <div class="cname">${c.make} ${c.model} <span style="color:var(--muted);font-size:9px">(${c.year})</span></div>
+          <div class="cdet">${c.drive}${c.hp?' · '+c.hp+' CV':''}${c.tyre?' · '+c.tyre:''} · ${(c.gears||[]).length} marce · ${c.cylinders||4} cil</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:8px">
+          <div class="cmass">${c.mass}</div><div class="cmass-u">kg</div>
+        </div>
+      </div>
+      <div class="car-actions">
+        <button class="btn-edit" onclick="editCar(${c.id})">✏️ MODIFICA</button>
+        <button class="btn-delete" onclick="deleteCar(${c.id})">🗑 ELIMINA</button>
+      </div>
+    </div>`).join('');
+}
+
+function selectCar(id){
+  S.car=S.cars.find(c=>c.id===id);S.gear=null;S.totalRatio=null;
+  S.wheelR=S.car.tyre?parseTyre(S.car.tyre):.31;
+  renderCarList();
+  document.getElementById('infocar').textContent=`${S.car.make} ${S.car.model} · ${S.car.mass} kg`;
+  document.getElementById('infogear').textContent='— premi una marcia';
+  document.getElementById('inforatio').textContent='—';
+  const tr=parseTyre(S.car.tyre||'');
+  document.getElementById('infotyre').textContent=S.car.tyre&&tr?`${S.car.tyre} (r=${tr.toFixed(4)}m)`:'N/D';
+  const row=document.getElementById('gearRow');
+  if(S.car.gears&&S.car.gears.length)
+    row.innerHTML=S.car.gears.map((_,i)=>`<button class="gear-btn" onclick="openGearModal()">${i+1}</button>`).join('')+
+      `<button class="gear-btn unk" onclick="openGearModal()">?</button>`;
+  else
+    row.innerHTML=`<button class="gear-btn unk" onclick="openGearModal()">SELEZIONA MARCIA</button>`;
+  if(!S.gpsActive) startGPS();
+  // Reset calibration when car changes
+  const cal=JSON.parse(localStorage.getItem('gd_calib')||'null');
+  if(cal&&cal.carId===S.car.id) calibFreqHz=cal.freq;
+  else calibFreqHz=null;
+}
+
+function getFormData(){
+  const make=document.getElementById('cMake').value.trim();
+  const model=document.getElementById('cModel').value.trim();
+  const year=parseInt(document.getElementById('cYear').value)||new Date().getFullYear();
+  const mass=parseFloat(document.getElementById('cMass').value);
+  const hp=parseInt(document.getElementById('cHp').value)||null;
+  const drive=document.getElementById('cDrive').value;
+  const cyl=parseInt(document.getElementById('cCyl').value)||4;
+  const tyre=document.getElementById('cTyre').value.trim();
+  const fd=parseFloat(document.getElementById('rFinal').value)||null;
+  if(!make||!model||!mass||mass<300){alert('Compila: Marca, Modello, Massa (min 300 kg)');return null;}
+  if(tyre&&!parseTyre(tyre)){alert('Formato gomma non valido. Usa es. 225/45R17');return null;}
+  const gears=[];
+  for(let i=1;i<=MAX_G;i++){const v=parseFloat(document.getElementById('r'+i).value);if(v>0)gears.push(v);}
+  return{make,model,year,mass,hp,drive,cylinders:cyl,tyre,finalDrive:fd,gears};
+}
+
+function clearForm(){
+  ['cMake','cModel','cYear','cMass','cHp','cTyre','rFinal'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cCyl').value='4';
+  document.getElementById('cDrive').value='RWD';
+  for(let i=1;i<=MAX_G;i++) document.getElementById('r'+i).value='';
+}
+
+function addCar(){
+  const data=getFormData();if(!data) return;
+  S.cars.push({id:Date.now(),...data});
+  save();renderCarList();clearForm();
+  alert(`${data.make} ${data.model} aggiunta!`);
+}
+
+function editCar(id){
+  const c=S.cars.find(x=>x.id===id);if(!c) return;
+  editingCarId=id;
+  // Fill form
+  document.getElementById('cMake').value=c.make||'';
+  document.getElementById('cModel').value=c.model||'';
+  document.getElementById('cYear').value=c.year||'';
+  document.getElementById('cMass').value=c.mass||'';
+  document.getElementById('cHp').value=c.hp||'';
+  document.getElementById('cDrive').value=c.drive||'RWD';
+  document.getElementById('cCyl').value=c.cylinders||4;
+  document.getElementById('cTyre').value=c.tyre||'';
+  document.getElementById('rFinal').value=c.finalDrive||'';
+  // Re-build gear inputs in case they weren't built yet
+  buildGearInputs();
+  (c.gears||[]).forEach((v,i)=>{
+    const el=document.getElementById('r'+(i+1));if(el) el.value=v;
+  });
+  // Show update/cancel buttons, hide add
+  document.getElementById('btnAdd').style.display='none';
+  document.getElementById('btnUpdate').style.display='block';
+  document.getElementById('btnCancelEdit').style.display='block';
+  document.getElementById('formTitle').textContent='✏️ MODIFICA AUTO';
+  // Scroll to form
+  document.getElementById('carForm').scrollIntoView({behavior:'smooth'});
+}
+
+function updateCar(){
+  const data=getFormData();if(!data) return;
+  const idx=S.cars.findIndex(x=>x.id===editingCarId);
+  if(idx<0) return;
+  S.cars[idx]={...S.cars[idx],...data};
+  // If editing the currently selected car, refresh it
+  if(S.car&&S.car.id===editingCarId) S.car=S.cars[idx];
+  save();renderCarList();clearForm();cancelEdit();
+  alert(`${data.make} ${data.model} aggiornata!`);
+}
+
+function cancelEdit(){
+  editingCarId=null;
+  document.getElementById('btnAdd').style.display='block';
+  document.getElementById('btnUpdate').style.display='none';
+  document.getElementById('btnCancelEdit').style.display='none';
+  document.getElementById('formTitle').textContent='+ AGGIUNGI AUTO';
+  clearForm();
+}
+
+function deleteCar(id){
+  const c=S.cars.find(x=>x.id===id);if(!c) return;
+  if(!confirm(`Eliminare ${c.make} ${c.model}?`)) return;
+  S.cars=S.cars.filter(x=>x.id!==id);
+  if(S.car&&S.car.id===id){S.car=null;S.gear=null;S.totalRatio=null;}
+  save();renderCarList();
+}
+
+// ═══════════════════════════════════════════════════════
+// CAR MODE
+// ═══════════════════════════════════════════════════════
+function openCarMode(){
+  if(!S.car){alert('Seleziona prima un\'auto nella scheda AUTO.');return;}
+  if(!S.gpsActive) startGPS();
+  document.getElementById('carModeScreen').classList.add('open');
+  carModeOpen=true;
+  try{if(screen.orientation&&screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});}catch(e){}
+  if(navigator.wakeLock) navigator.wakeLock.request('screen').catch(()=>{});
+  // Restore calibration for this car
+  const cal=JSON.parse(localStorage.getItem('gd_calib')||'null');
+  if(cal&&S.car&&cal.carId===S.car.id){
+    calibFreqHz=cal.freq;
+    document.getElementById('calibResult').textContent=`✓ Calibrato: ${calibFreqHz.toFixed(1)} Hz @ ${CALIB_RPM} RPM`;
+    document.getElementById('calibStatus').innerHTML=`Il microfono è calibrato.<br/>Ora rilevo la marcia automaticamente.`;
+  }
+  if(S.gear) document.getElementById('cmGearNum').textContent=S.gear;
+  setTimeout(()=>{initTacho();tachoLoop();},80);
+}
+
+function closeCarMode(){
+  document.getElementById('carModeScreen').classList.remove('open');
+  carModeOpen=false;
+  if(tachoRAF){cancelAnimationFrame(tachoRAF);tachoRAF=null;}
+  if(micActive) stopMic();
+  try{if(screen.orientation&&screen.orientation.unlock) screen.orientation.unlock();}catch(e){}
+}
+
+function initTacho(){
+  const canvas=document.getElementById('tachoCanvas');
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.getBoundingClientRect();
+  const size=Math.max(rect.width||100,rect.height||100);
+  canvas.width=Math.round(size*dpr);
+  canvas.height=Math.round(size*dpr);
+}
+
+function redrawTacho(){drawTacho(smoothedRpm);}
+
+function tachoLoop(){
+  if(!carModeOpen) return;
+  const target=S.liveRpm||0;
+  smoothedRpm+=(target-smoothedRpm)*0.18;
+  drawTacho(smoothedRpm);
+  document.getElementById('cmSpeed').textContent=S.liveKmh.toFixed(0);
+  document.getElementById('cmPower').textContent=S.liveCv>0?S.liveCv.toFixed(0):'—';
+  document.getElementById('cmTorque').textContent=S.liveTorque>0?S.liveTorque.toFixed(0):'—';
+  if(!micActive||!micSignalOk){
+    document.getElementById('cmRpmVal').textContent=Math.round(smoothedRpm).toLocaleString('it');
+    document.getElementById('rpmSource').textContent=S.rpmSource||'GPS';
+    if(S.gear) document.getElementById('cmGearNum').textContent=S.gear;
+  }
+  tachoRAF=requestAnimationFrame(tachoLoop);
+}
+
+function drawTacho(rpm){
+  const canvas=document.getElementById('tachoCanvas');
+  if(!canvas||!canvas.width) return;
+  const dpr=window.devicePixelRatio||1;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width/dpr,H=canvas.height/dpr;
+  const cx=W/2,cy=H/2,R=Math.min(W,H)/2-6;
+  const maxRpm=parseInt(document.getElementById('rpmMax')?.value)||8000;
+  const redline=parseInt(document.getElementById('rpmRedline')?.value)||7000;
+  const startA=Math.PI*0.75,sweep=Math.PI*1.5;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Background
+  ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
+  const bg=ctx.createRadialGradient(cx,cy,R*.5,cx,cy,R);
+  bg.addColorStop(0,'#0e0e0e');bg.addColorStop(1,'#040404');
+  ctx.fillStyle=bg;ctx.fill();
+  ctx.strokeStyle='#1c1c1c';ctx.lineWidth=3;ctx.stroke();
+
+  // Track bg
+  ctx.beginPath();ctx.arc(cx,cy,R-13,startA,startA+sweep);
+  ctx.strokeStyle='#131313';ctx.lineWidth=18;ctx.lineCap='butt';ctx.stroke();
+
+  // Colored segments
+  const seg=200;
+  for(let i=0;i<seg;i++){
+    const t=i/seg,rpmT=t*maxRpm;
+    const a0=startA+sweep*t,a1=startA+sweep*(i+1)/seg;
+    let color;
+    if(rpmT<redline*.6)       color='rgba(0,180,80,.85)';
+    else if(rpmT<redline*.85) color='rgba(200,160,0,.88)';
+    else if(rpmT<redline)     color='rgba(255,100,0,.92)';
+    else                       color=`rgba(255,20,20,${rpm>=rpmT?1:.25})`;
+    ctx.beginPath();ctx.arc(cx,cy,R-13,a0,a1+.01);
+    ctx.strokeStyle=color;ctx.lineWidth=18;ctx.lineCap='butt';ctx.stroke();
+  }
+
+  // Redline glow
+  if(rpm>=redline){
+    ctx.beginPath();ctx.arc(cx,cy,R-13,startA+sweep*(redline/maxRpm),startA+sweep);
+    ctx.strokeStyle='rgba(255,20,20,.45)';ctx.lineWidth=6;
+    ctx.shadowColor='#ff2020';ctx.shadowBlur=22;ctx.stroke();ctx.shadowBlur=0;
+  }
+
+  // Ticks + labels
+  const steps=maxRpm/500;
+  for(let i=0;i<=steps;i++){
+    const t=i/steps,angle=startA+sweep*t,rpmT=(maxRpm/steps)*i,major=i%2===0;
+    const rIn=R-(major?32:21),rOut=R-15;
+    ctx.beginPath();ctx.moveTo(cx+Math.cos(angle)*rIn,cy+Math.sin(angle)*rIn);
+    ctx.lineTo(cx+Math.cos(angle)*rOut,cy+Math.sin(angle)*rOut);
+    ctx.strokeStyle=rpmT>=redline?'#ff4040':'#484848';
+    ctx.lineWidth=major?2.5:1;ctx.lineCap='round';ctx.stroke();
+    if(major){
+      const lR=R-50;
+      ctx.font=`bold ${Math.max(10,Math.round(R/13))}px JetBrains Mono,monospace`;
+      ctx.fillStyle=rpmT>=redline?'#ff5555':'#777';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText((rpmT/1000).toFixed(0),cx+Math.cos(angle)*lR,cy+Math.sin(angle)*lR);
+    }
+  }
+
+  // Needle
+  const cRpm=Math.min(Math.max(rpm,0),maxRpm);
+  const nA=startA+sweep*(cRpm/maxRpm);
+  const nLen=R-24;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(nA);
+  ctx.shadowColor='rgba(255,30,30,.7)';ctx.shadowBlur=16;
+  ctx.beginPath();ctx.moveTo(-16,5);ctx.lineTo(nLen,0);ctx.lineTo(-16,-5);ctx.closePath();
+  ctx.fillStyle=cRpm>=redline?'#ff0000':'#ff3333';ctx.fill();
+  ctx.shadowBlur=0;ctx.restore();
+
+  // Hub
+  ctx.beginPath();ctx.arc(cx,cy,15,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();
+  ctx.strokeStyle='#2a2a2a';ctx.lineWidth=2;ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);
+  ctx.fillStyle=cRpm>=redline?'#ff0000':'#ff3333';
+  ctx.shadowColor='#ff3333';ctx.shadowBlur=cRpm>=redline?18:5;ctx.fill();ctx.shadowBlur=0;
+
+  // Inner ring decoration
+  ctx.beginPath();ctx.arc(cx,cy,R*.36,0,Math.PI*2);ctx.strokeStyle='#161616';ctx.lineWidth=1;ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════════
+// RESIZE
+// ═══════════════════════════════════════════════════════
+window.addEventListener('resize',()=>{
+  if(carModeOpen) setTimeout(()=>{initTacho();drawTacho(smoothedRpm);},120);
+});
+</script>
+</body>
+</html>
